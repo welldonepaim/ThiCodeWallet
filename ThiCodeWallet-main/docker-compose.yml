@@ -1,0 +1,44 @@
+services:
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-wallet-volume:/data/db
+    restart: always
+    networks:
+      - net-wallet
+
+  api:
+    container_name: api-wallet
+    build: ./api
+    restart: always
+    ports:
+      - "5002:5002"
+    depends_on:
+      - mongo
+    env_file:
+      - ./api/.env
+    networks:
+      - net-wallet
+
+  nginx:
+    container_name: nginx-wallet
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - net-wallet
+
+volumes:
+  mongodb-wallet-volume:
+
+networks:
+  net-wallet:
+    name: net-wallet
+    driver: bridge
