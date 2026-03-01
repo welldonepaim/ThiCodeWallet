@@ -17,6 +17,18 @@ services:
       - "5002:5002"
     depends_on:
       - mongo
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const s=require('net').createConnection(5002,'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),1000);",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
     env_file:
       - ./api/.env
     networks:
@@ -28,10 +40,10 @@ services:
       context: .
       dockerfile: ./nginx/Dockerfile
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "80:80"
-      - "443:443"
     networks:
       - net-wallet
 
