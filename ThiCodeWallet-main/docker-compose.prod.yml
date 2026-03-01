@@ -1,0 +1,64 @@
+services:
+  mongo:
+    image: mongo:latest
+    restart: always
+    volumes:
+      - mongodb-wallet-volume:/data/db
+    networks:
+      - net-wallet
+
+  api:
+    container_name: api-wallet
+    build: ./api
+    restart: always
+    depends_on:
+      - mongo
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const s=require('net').createConnection(5002,'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),1000);",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    env_file:
+      - ./api/.env
+    expose:
+      - "5002"
+    networks:
+      - net-wallet
+
+  proxy:
+    container_name: proxy-wallet
+    build:
+      context: .
+      dockerfile: ./caddy/Dockerfile
+    restart: always
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      - DOMAIN=${DOMAIN}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - net-wallet
+
+volumes:
+  mongodb-wallet-volume:
+  caddy_data:
+  caddy_config:
+
+networks:
+  net-wallet:
+    name: net-wallet
+    driver: bridge

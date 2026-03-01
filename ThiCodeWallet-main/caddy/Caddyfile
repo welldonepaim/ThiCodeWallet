@@ -1,0 +1,15 @@
+{
+  email {$LETSENCRYPT_EMAIL}
+}
+
+{$DOMAIN} {
+  root * /srv
+  encode zstd gzip
+
+  handle_path /api/* {
+    reverse_proxy api:5002
+  }
+
+  try_files {path} /index.html
+  file_server
+}
